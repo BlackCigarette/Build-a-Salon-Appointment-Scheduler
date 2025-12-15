@@ -2,204 +2,219 @@
 ## (Studi Kasus: Pengembangan dari Proof of Concept ke Desain Siap Produksi)
 
 ## Executive Summary
-### Latar Belakang
+Proyek ini berawal dari sistem booking salon sederhana berbasis CLI (Bash + PostgreSQL) yang dikembangkan sebagai tugas FreeCodeCamp. Sistem tersebut diperlakukan sebagai Proof of Concept (PoC), lalu dianalisis ulang untuk menilai kesiapan integritas data, konsistensi jadwal, dan desain database sebelum digunakan di lingkungan produksi.
 
-Proyek ini berawal dari sebuah tugas FreeCodeCamp berupa sistem booking salon sederhana berbasis CLI menggunakan Bash dan PostgreSQL.
-Sistem tersebut saya perlakukan sebagai Proof of Concept (PoC) untuk memahami bagaimana sebuah sistem awal bekerja sebelum digunakan dalam skala yang lebih serius.
+## Desain Sistem
+Sistem terdiri dari empat entitas utama:
 
-Dari PoC ini, saya melakukan analisis untuk melihat apakah sistem sudah cukup aman, rapi, dan siap dikembangkan ke tahap produksi.
+``customers``
 
-### Tujuan
-Tujuan dari studi kasus ini adalah menunjukkan cara saya berpikir sebagai Junior Technical Coordinator, khususnya dalam:
+``services``
 
-1. Memahami sistem yang sudah ada
-2. Mengidentifikasi masalah integritas data dan keterbatasan arsitektur
-3. Menyusun rekomendasi perbaikan agar sistem lebih stabil dan siap dikembangkan
-   
-Fokus utama proyek ini adalah analisis dan perencanaan teknis, _**bukan**_ pembuatan aplikasi secara penuh
+``stylists``
 
-### Fokus Proyek
+``appointments``
 
-Proyek ini berfokus pada:
+Tabel appointments berperan sebagai single source of truth untuk seluruh data booking dan ketersediaan waktu stylist.
 
-1. Analisis integritas data menggunakan SQL
-2. Pemahaman alur data dari input hingga penyimpanan
-3. Evaluasi kesiapan sistem untuk skala produksi
-4. Penggunaan Python dan AI tools untuk membantu analisis dan dokumentasi
+Durasi layanan disimpan pada tabel services dan digunakan untuk menghitung rentang waktu booking secara dinamis.
 
-### Pendekatan
+## Masalah yang Diidentifikasi
 
-Pendekatan yang digunakan meliputi:
-1. Menganalisis struktur database dan alur sistem awal
-2. Mengidentifikasi risiko sebelum sistem dikembangkan lebih jauh
-3. Merancang perbaikan pada level desain database dan arsitektur
-4. Melakukan investigasi data menggunakan SQL dan Python
-   
-Pendekatan ini mencerminkan peran Junior Technical Coordinator, yang bertugas membantu menjaga kualitas sistem dan data sejak tahap awal.
+1. Risiko double booking stylist
+2. Representasi waktu yang belum aman untuk analisis
+3. Sistem PoC belum memiliki mekanisme proteksi konflik di level database
 
-## Bagian 1 — Analisis Awal (The Starting Point)
-### 1.1 Latar Belakang Proyek (Konteks PoC)
-Sistem booking salon ini awalnya dikembangkan sebagai bagian dari tugas FreeCodeCamp dengan tujuan melatih pemahaman dasar mengenai:
-1. Relasi antar tabel dalam database (Primary Key & Foreign Key)
-2. Interaksi sederhana antara script Bash dan PostgreSQL
-3. Alur input–proses–output dalam aplikasi berbasis CLI
+## Solusi Teknis (Design-Level)
 
-Pada tahap ini, sistem sudah mampu menjalankan fungsi dasar, seperti:
-1. menampilkan daftar layanan,
-2. mencatat data pelanggan,
-3. dan menyimpan jadwal appointment ke dalam database.
+1. Menggunakan tipe data waktu berbasis range (tsrange)
+2. Menerapkan **EXCLUSION CONSTRAINT** untuk mencegah overlapping appointment
+3. Menjadikan database sebagai lapisan proteksi utama terhadap konflik dan race condition
 
-Sebagai Proof of Concept (PoC), sistem ini sudah memenuhi tujuannya:
-membuktikan bahwa logika dasar aplikasi dan koneksi ke database dapat berjalan dengan baik.
+Pendekatan ini menghilangkan kebutuhan tabel availability terpisah dan memastikan konsistensi data secara otomatis.
 
-### 1.2 Gambaran Arsitektur Sistem Awal
-Secara umum, arsitektur sistem awal terdiri dari:
-1. Interface: CLI berbasis Bash
-2. Logic: Query SQL yang dieksekusi langsung dari script
-3. Database: PostgreSQL dengan tiga tabel utama:
-   
-**customers**, **Services**, **appointments**
+## SQL & Data Thinking
 
-Alur data pada sistem awal dapat diringkas sebagai berikut:
+SQL digunakan tidak hanya untuk CRUD, tetapi sebagai alat:
 
-Input Pengguna → Script Bash → Query SQL → Database → Output CLI
+1. validasi integritas jadwal
 
-Struktur ini sederhana dan efektif untuk tahap pembelajaran, namun memiliki keterbatasan jika sistem ingin digunakan lebih lanjut.
+2. investigasi konflik
 
-### 1.3 Kekuatan Sistem Awal
-Walaupun bersifat PoC, sistem awal memiliki beberapa kekuatan yang penting sebagai fondasi:
+3. audit dan analisis data booking
 
-a. Relasi Data yang Jelas
+## Nilai Tambah
 
-Database sudah menggunakan:
+Studi kasus ini menunjukkan pendekatan kerja seorang Junior Technical Coordinator yang:
 
-1. Primary Key pada setiap tabel
-2. Foreign Key pada tabel **_appointments_** yang menghubungkan pelanggan dan layanan
+1. memahami batas PoC vs produksi
+2. berpikir sistemik
+3. memprioritaskan integritas data
+4. memilih solusi sederhana namun aman secara teknis
 
-Hal ini menunjukkan bahwa struktur data sudah dipikirkan secara relasional dan tidak bersifat flat.
 
-b. Kontrol Duplikasi Data
+## 🧱 Tech Stack
 
-Tabel **_customers_** memiliki constraint unik pada nomor telepon, sehingga sistem dapat:
+**PostgreSQL** — database & business logic
 
-1. mencegah duplikasi data pelanggan
-2. menjaga konsistensi identitas pelanggan
+**Bash** — command line interface
 
-c. Alur Logika yang Dapat Ditelusuri
+**PL/pgSQL** — stored procedure
 
-Logika aplikasi di dalam script Bash masih sederhana dan linear, sehingga:
+**GitHub Mermaid** — ERD visualization
 
-1. mudah dibaca
-2. mudah ditelusuri alur datanya
-3. cocok untuk proses analisis awal
+```mermaid
+erDiagram
+    CUSTOMERS {
+        int customer_id PK
+        varchar phone "UNIQUE"
+        varchar name
+    }
 
-Bagi seorang Junior Technical Coordinator, kondisi ini justru ideal sebagai titik awal untuk melakukan evaluasi dan perencanaan perbaikan.
+    SERVICES {
+        int service_id PK
+        varchar name
+        int duration_minutes
+    }
 
-### 1.4 Alasan Dilakukannya Analisis Lanjutan
-Meskipun sistem awal berfungsi, terdapat pertanyaan penting yang muncul jika sistem ini diasumsikan akan digunakan di lingkungan produksi, seperti:
-1. Apakah format data yang digunakan sudah aman dari kesalahan input?
-2. Apakah sistem mampu mencegah konflik jadwal?
-3. Apakah arsitektur ini mudah dikembangkan oleh lebih dari satu developer?
+    STYLISTS {
+        int stylist_id PK
+        varchar name
+    }
 
-Pertanyaan-pertanyaan inilah yang menjadi dasar dilakukannya analisis lebih lanjut pada bagian berikutnya.
+    APPOINTMENTS {
+        int appointment_id PK
+        int customer_id FK
+        int service_id FK
+        int stylist_id FK
+        timestamp start_time
+        timestamp end_time
+    }
 
-### Bagian 1.5 — Identifikasi Inefisiensi & Risiko Arsitektur
-### Ringkasan bagian identifikasi Inefisiensi & Risiko Arsitektur
-| Area         | Risiko            | Dampak               |
-| ------------ | ----------------- | -------------------- |
-| Format Waktu | Tidak tervalidasi | Data tidak konsisten |
-| Jadwal       | Double booking    | Konflik operasional  |
-| Orkestrasi   | Bash-based logic  | Sulit dikembangkan   |
-
-Pada tahap ini, sistem booking salon dianalisis bukan lagi sebagai tugas pembelajaran, tetapi sebagai sistem yang berpotensi digunakan di lingkungan nyata. Analisis difokuskan pada risiko yang dapat memengaruhi **integritas data**, **skalabilitas**, dan **kemudahan pengembangan**.
-
-#### Temuan
-Pada skema awal, kolom time pada tabel appointments menggunakan tipe data:
+    CUSTOMERS ||--o{ APPOINTMENTS : books
+    SERVICES  ||--o{ APPOINTMENTS : includes
+    STYLISTS  ||--o{ APPOINTMENTS : handles
 ```
-time VARCHAR(20)
+## 🧠 Design Decisions
+### 1️⃣ Appointments as Single Source of Truth
+Tidak ada tabel ``stylist_availability``.
+Ketersediaan stylist dihitung secara dinamis dari tabel appointments.
+
+Keuntungan:
+
+Tidak ada data redundan
+
+Tidak ada risiko data tidak sinkron
+
+Query lebih sederhana dan aman
+
+### 2️⃣ Double Booking Prevention (Database-Level)
+Double booking stylist dicegah menggunakan **PostgreSQL EXCLUDE constraint**:
 ```
-#### Analisis
-Penggunaan tipe data teks untuk menyimpan informasi waktu memiliki beberapa risiko:
-
-1. Tidak ada validasi format waktu secara otomatis
-2. Rentan terhadap kesalahan input pengguna (misalnya: 10.30, 11am, jam sepuluh)
-3. Menyulitkan analisis berbasis waktu, seperti:
-   
-``
-jam paling sibuk
-``
-
-``
-pola booking harian
-``
-
-``
-durasi antar appointment
-``
-#### Dampak
-Dari sudut pandang integritas data, kondisi ini berisiko menyebabkan:
-
-1. data tidak konsisten
-2. kesulitan dalam analisis
-3. potensi kesalahan laporan di tahap selanjutnya
-
-#### Catatan Technical Coordinator:
-Data yang tidak terstruktur dengan baik di awal akan meningkatkan beban koreksi di tahap pengembangan dan analisis.
-
-### 1.5.2 Risiko Double Booking (Kesiapan Produksi)
-
-#### Temuan
-Skema awal belum memiliki mekanisme untuk mencegah:
-
-1. dua appointment di waktu yang sama
-2. konflik jadwal pada layanan atau stylist(pegawai)
-
-Tidak terdapat tabel atau constraint yang mengatur ketersediaan waktu secara eksplisit.
-#### Analisis
-Pada tahap PoC, kondisi ini masih dapat diterima. Namun jika sistem digunakan di produksi:
-
-1. Tidak ada jaminan bahwa satu slot waktu hanya bisa digunakan satu kali
-2. Sistem tidak siap menangani peningkatan jumlah pelanggan
-3. Potensi konflik jadwal meningkat seiring pertumbuhan data
-
-#### Dampak
-
-Risiko ini berdampak langsung pada:
-1. kualitas layanan
-2. kepercayaan pelanggan
-3. stabilitas operasional sistem
-
-#### Sudut pandang koordinasi teknis:
-Masalah seperti ini sering kali tidak terlihat di awal, namun menjadi sumber error utama ketika sistem mulai digunakan oleh banyak pihak.
-
-### 1.5.3 Inefisiensi Orkestrasi Teknis (Bash-based Flow)
-## Temuan
-Sistem awal menggunakan script Bash dengan eksekusi query PostgreSQL berulang melalui sub-shell:
+EXCLUDE USING gist (
+  stylist_id WITH =,
+  tsrange(start_time, end_time) WITH &&
+)
 ```
-$PSQL "QUERY"
-```
-#### Analisis
+Artinya:
 
-Pendekatan ini memiliki beberapa keterbatasan:
+Stylist yang sama
 
-Sulit dipelihara jika logika bisnis bertambah kompleks
+Tidak boleh memiliki appointment dengan waktu overlap
 
-Validasi data terbatas
+Dijamin oleh database (race-condition safe)
 
-Tidak ideal untuk pengelolaan transaksi (transactional logic)
+### 3️⃣ Working Hours Enforcement
+Jam operasional salon:
 
-Kurang aman jika dikembangkan lebih lanjut
+**09:00 – 17:00**
 
-#### Dampak
+Diatur menggunakan:
 
-Dalam konteks pengembangan jangka panjang:
+1. ``CHECK constraint`` pada tabel
+2. Validasi tambahan di stored procedure
 
-alur sistem menjadi sulit dikontrol
+### 4️⃣ Service Duration Logic
+Durasi layanan disimpan di tabel ``services``:
+| Service      | Duration |
+| ------------ | -------- |
+| Cut          | 30 min   |
+| Color        | 60 min   |
+| Perm         | 60 min   |
+| Full Service | 90 min   |
+Durasi aktual bisa berbeda saat konsultasi langsung karena jenis rambut menentukan durasi,
+namun sistem menggunakan estimasi awal untuk booking.
 
-koordinasi antar modul menjadi tidak jelas
+### ⚙️ Core Features
+**📞 Customer identification by phone number
+**
+**✂️ Service-based duration handling
+**
+**👤 Stylist-specific booking
+**
+**⏱️ Automatic end-time calculation
+**
+**🚫 Double booking prevention
+**
+**🕘 Working hours validation
+**
+**🖥️ CLI-based interaction
+**
 
-risiko bug meningkat
+### 🔁 Booking Flow (High Level)
+1. User memilih service
+2. User memilih stylist
+3. User memilih tanggal
+4. Sistem menampilkan slot tersedia (``get_available_slots``)
+5. User memilih jam
+6. Sistem memanggil ``book_appointment``
+7. Database memvalidasi & menyimpan booking
 
-#### Catatan Junior Technical Coordinator:
-Script Bash cocok untuk automasi sederhana, namun bukan pilihan ideal untuk mengorkestrasi logika bisnis yang kompleks.
+### Database Objects
+**Tables:**
 
+1. ``customers``
+2. ``services``
+3. ``stylists``
+4. ``appointments``
+
+**Functions:
+**
+``get_available_slots``
+
+``book_appointment``
+
+**Constraints:**
+
+Foreign Keys
+
+CHECK (working hours)
+
+EXCLUDE (no overlapping appointments)
+
+## Example Use Case
+
+Customer books Full Service at 15:30
+
+Duration = 90 minutes
+
+End time = 17:00 → valid
+
+Booking at 16:00 → ❌ rejected automatically
+
+## 📈 Possible Improvements
+
+Web / REST API interface
+
+Real-time availability calendar
+
+Dynamic duration after consultation
+
+User roles (admin / stylist)
+
+Analytics dashboard
+
+
+## ⭐ Closing Note
+
+project ini di bangun dengan chat gpt dan gemini sebagai partner diskusi dan debugging
