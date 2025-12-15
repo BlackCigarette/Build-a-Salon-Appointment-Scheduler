@@ -142,6 +142,8 @@ Durasi layanan disimpan di tabel ``services``:
 | Color        | 60 min   |
 | Perm         | 60 min   |
 | Full Service | 90 min   |
+
+
 Durasi aktual bisa berbeda saat konsultasi langsung karena jenis rambut menentukan durasi,
 namun sistem menggunakan estimasi awal untuk booking.
 
